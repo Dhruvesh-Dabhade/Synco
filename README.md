@@ -50,10 +50,15 @@ Security is at the foundation of Synco. Communication uses a robust Zero-Trust h
 ```
 
 ### Protocol Security Guards
-- **AES-GCM-256 Encryption**: Every packet following the successful pairing handshake is fully encrypted end-to-end.
-- **Clock Skew Mitigation**: Packet timestamps are validated against a 5-minute (300,000ms) maximum drift window to completely eliminate the risk of replay attacks.
+- **AES-256-GCM Encryption**: Every packet following the successful pairing handshake is fully encrypted end-to-end with AAD (Additional Authenticated Data) bound to `packetType|senderId|receiverId`.
+- **X25519 + Ed25519 Key Agreement**: Ephemeral X25519 Diffie-Hellman key exchange with Ed25519 identity signatures — session keys derived via HKDF-SHA256.
+- **Random PIN Per Session**: A fresh 6-digit PIN is generated via `SecureRandom` on every desktop launch. No hardcoded default.
+- **Nonce Reuse Protection**: AES-GCM nonces are tracked in a thread-safe set (capped at 100K) to prevent replay and nonce reuse attacks.
+- **Clock Skew Mitigation**: Packet timestamps are validated against a 5-minute (300,000ms) maximum drift window to completely eliminate replay attacks.
 - **Payload Length Restrictions**: Heavy payloads or oversized packets are blocked at the socket level. Handshake values, Sender/Receiver IDs, and packet identifiers have a strict limit of 100 characters. Single message sizes exceeding 65KB are automatically dropped.
-- **WebSocket Rate-Limiting**: The desktop web server actively rate-limits incoming messages to a maximum of 120 messages per minute per IP address, preventing resource exhaustion.
+- **WebSocket Rate-Limiting**: The desktop server rate-limits WebSocket messages to 120 per minute per connection. The web dashboard also rate-limits HTTP and WebSocket requests per IP.
+- **TLS v1.2+ with Origin Validation**: All WebSocket connections enforce origin checks. Desktop identity keys are stored AES-256-GCM encrypted on disk.
+- **Web Dashboard Auth Token**: The web control panel requires a random 32-byte Base64URL auth token printed at startup.
 
 ---
 
@@ -92,15 +97,25 @@ For complete step-by-step instructions—including Git repository cloning, setti
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/jyotideepak241988/Synco.git
+git clone https://github.com/Dhruvesh-Dabhade/Synco.git
 cd Synco
 
 # 2. Build and launch the Desktop Companion
 gradle :desktop:installDist
 gradle :desktop:run
+```
+Upon startup, the terminal displays:
+```
+Listening on Port: 8765 | PIN Code: 742189
+Web Dashboard: http://localhost:8080?token=<32-char-base64url-token>
+```
 
-# 3. Compile the Android Client app
+```bash
+# 3. Compile the Android Client app (debug)
 gradle :app:assembleDebug
+
+#    Compile the Android Client app (release — ProGuard enabled)
+gradle :app:assembleRelease
 ```
 
 ---
@@ -129,4 +144,4 @@ gradle :app:assembleDebug
 ---
 
 ## 🔒 Privacy Notice
-Synco is an **offline-first local-network utility**. All WebSocket packets, call states, keystores, and notifications are sent directly between your Android device and your desktop host over your local private Wi-Fi network. **No remote servers, external APIs, or analytics trackers are used.** Your data is entirely yours.
+Synco is an **offline-first local-network utility**. All WebSocket packets, call states, keystores, and notifications are sent directly between your Android device and your desktop host over your local private Wi-Fi network. **No remote servers, external APIs, or analytics trackers are used.** Persistent desktop identity keys are encrypted at rest with AES-256-GCM. Your data is entirely yours.
