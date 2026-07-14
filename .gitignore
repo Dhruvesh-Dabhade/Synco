@@ -23,5 +23,6 @@ debug.keystore
 *.jar
 desktop/build/
 
-# Raw unencrypted key files (encrypted .keys.enc is safe for commit)
+# Raw unencrypted key files (encrypted .keys.enc files in subdirectories are safe)
 *.key
+/desktop_identity.keys.enc
