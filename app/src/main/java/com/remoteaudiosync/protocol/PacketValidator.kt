@@ -4,6 +4,7 @@ import java.util.UUID
 
 object PacketValidator {
     const val CURRENT_VERSION = 1
+    private const val MAX_TIMESTAMP_DRIFT_MS = 300000L
 
     fun validate(packet: Packet): ProtocolResult<Packet> {
         if (packet.version <= 0) {
@@ -12,7 +13,7 @@ object PacketValidator {
 
         try {
             UUID.fromString(packet.id)
-        } catch (e: Exception) {
+        } catch (e: IllegalArgumentException) {
             return ProtocolResult.Failure(ProtocolError.InvalidPacketId("Invalid packet ID format: ${packet.id}"))
         }
 
@@ -24,8 +25,9 @@ object PacketValidator {
             return ProtocolResult.Failure(ProtocolError.InvalidTimestamp("Timestamp must be greater than 0"))
         }
 
-        val ageMs = Math.abs(System.currentTimeMillis() - packet.timestamp)
-        if (ageMs > 300000L) { // 5 minutes max clock skew/drift to protect against replay attacks
+        val now = System.currentTimeMillis()
+        val ageMs = if (now >= packet.timestamp) now - packet.timestamp else packet.timestamp - now
+        if (ageMs > MAX_TIMESTAMP_DRIFT_MS) {
             return ProtocolResult.Failure(ProtocolError.InvalidTimestamp("Packet timestamp out of acceptable window (skew: ${ageMs}ms)"))
         }
 
@@ -69,9 +71,8 @@ object PacketValidator {
             PacketType.LIMITED_MODE_STATE -> LimitedModeStatePayload::class
             PacketType.WAKE_REQUEST -> WakeRequestPayload::class
 
-            // Types that don't strictly require a payload
             PacketType.PING,
-            PacketType.PONG -> return null 
+            PacketType.PONG -> return null
         }
 
         if (payload == null) {

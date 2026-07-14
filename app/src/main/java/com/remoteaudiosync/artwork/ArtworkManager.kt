@@ -69,9 +69,15 @@ class ArtworkManager(
     private fun handleArtworkResponse(payload: ArtworkResponsePayload, senderId: String, receiverId: String) {
         val artworkId = payload.mediaId
         val base64Data = payload.artworkBase64
-        
+
         if (base64Data.isEmpty()) {
             sendError("ARTWORK_CORRUPT", "Artwork base64 data is empty", receiverId, senderId)
+            downloader.handleArtworkResponse(artworkId, null)
+            return
+        }
+
+        if (base64Data.length > 500000) {
+            sendError("ARTWORK_TOO_LARGE", "Artwork data exceeds maximum size", receiverId, senderId)
             downloader.handleArtworkResponse(artworkId, null)
             return
         }

@@ -33,22 +33,18 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      isMinifyEnabled = false
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

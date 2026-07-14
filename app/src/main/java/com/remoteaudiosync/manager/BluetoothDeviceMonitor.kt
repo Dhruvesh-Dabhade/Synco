@@ -66,7 +66,7 @@ class DefaultBluetoothDeviceMonitor(private val context: Context) : BluetoothDev
                 addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
                 addAction("android.bluetooth.device.action.BATTERY_LEVEL_CHANGED")
             }
-            context.registerReceiver(bluetoothReceiver, filter)
+            context.registerReceiver(bluetoothReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } catch (e: Exception) {
             // Fallback if failed to register
         }

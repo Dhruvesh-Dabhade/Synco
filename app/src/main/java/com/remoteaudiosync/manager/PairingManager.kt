@@ -24,15 +24,24 @@ class PairingManager(
     private val cryptoManager: CryptoManager
 ) {
 
+    private fun getDeviceName(): String {
+        return try {
+            val brand = android.os.Build.MANUFACTURER ?: "Unknown"
+            val model = android.os.Build.MODEL ?: "Device"
+            "$brand $model"
+        } catch (e: Exception) {
+            "Synco Device"
+        }
+    }
+
     suspend fun initiatePairing(pin: String): PairingResult {
-        // Init identity key
         val (pubKeyBytes, privKeyBytes) = identityKeyStore.getOrGenerateIdentityKey()
         cryptoManager.initIdentity(pubKeyBytes, privKeyBytes)
-        
+
         val pubKeyB64 = Base64.encodeToString(pubKeyBytes, Base64.NO_WRAP)
-        
+
         val pairRequest = PairRequestPayload(
-            deviceName = "Android Device",
+            deviceName = getDeviceName(),
             publicKey = pubKeyB64,
             pin = pin
         )

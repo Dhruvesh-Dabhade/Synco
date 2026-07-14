@@ -80,7 +80,7 @@ class SyncoForegroundService : Service() {
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "Synco::BackgroundSyncWakeLock"
             ).apply {
-                acquire()
+                acquire(600000L)
             }
         }
     }

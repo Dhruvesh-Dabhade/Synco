@@ -22,35 +22,80 @@ import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+
+private fun encryptData(data: ByteArray, key: SecretKey): Pair<ByteArray, ByteArray> {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    cipher.init(Cipher.ENCRYPT_MODE, key)
+    val ciphertext = cipher.doFinal(data)
+    return Pair(ciphertext, cipher.iv)
+}
+
+private fun decryptData(ciphertext: ByteArray, iv: ByteArray, key: SecretKey): ByteArray {
+    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+    val spec = GCMParameterSpec(128, iv)
+    cipher.init(Cipher.DECRYPT_MODE, key, spec)
+    return cipher.doFinal(ciphertext)
+}
+
+private fun loadOrCreateEncryptionKey(): SecretKey {
+    val keyFile = File("desktop_identity.key")
+    if (keyFile.exists()) {
+        val encoded = Base64.getDecoder().decode(keyFile.readText().trim())
+        return SecretKeySpec(encoded, "AES")
+    }
+    val keyGen = KeyGenerator.getInstance("AES")
+    keyGen.init(256)
+    val key = keyGen.generateKey()
+    keyFile.writeText(Base64.getEncoder().encodeToString(key.encoded))
+    keyFile.setReadable(true, true)
+    keyFile.setWritable(true, true)
+    return key
+}
 
 fun getOrGenerateDesktopIdentity(): Pair<ByteArray, ByteArray> {
-    val file = File("desktop_identity.keys")
+    val file = File("desktop_identity.keys.enc")
+    val encKey = loadOrCreateEncryptionKey()
+
     if (file.exists()) {
         try {
             val lines = file.readLines()
             if (lines.size >= 2) {
                 val pub = Base64.getDecoder().decode(lines[0].trim())
-                val priv = Base64.getDecoder().decode(lines[1].trim())
+                val privEncoded = Base64.getDecoder().decode(lines[1].trim())
+                val iv = Base64.getDecoder().decode(lines[2].trim())
+                val priv = decryptData(privEncoded, iv, encKey)
                 return Pair(pub, priv)
             }
         } catch (e: Exception) {
             println("[ERROR] Failed to read desktop identity keys: ${e.message}")
         }
     }
-    
+
     val generator = Ed25519KeyPairGenerator()
     generator.init(Ed25519KeyGenerationParameters(SecureRandom()))
     val keyPair = generator.generateKeyPair()
     val pubBytes = (keyPair.public as Ed25519PublicKeyParameters).encoded
     val privBytes = (keyPair.private as Ed25519PrivateKeyParameters).encoded
-    
+
     try {
-        file.writeText("${Base64.getEncoder().encodeToString(pubBytes)}\n${Base64.getEncoder().encodeToString(privBytes)}")
-        println("[INFO] Generated new persistent identity keys in desktop_identity.keys")
+        val (privEncrypted, iv) = encryptData(privBytes, encKey)
+        file.writeText(
+            "${Base64.getEncoder().encodeToString(pubBytes)}\n" +
+            "${Base64.getEncoder().encodeToString(privEncrypted)}\n" +
+            "${Base64.getEncoder().encodeToString(iv)}"
+        )
+        file.setReadable(true, true)
+        file.setWritable(true, true)
+        println("[INFO] Generated new encrypted persistent identity keys")
     } catch (e: Exception) {
         println("[ERROR] Failed to save desktop identity keys: ${e.message}")
     }
-    
+
     return Pair(pubBytes, privBytes)
 }
 
@@ -58,14 +103,13 @@ class DesktopAppServer(private val port: Int) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var serverCrypto: CryptoManager
     private lateinit var serverIdentityPub: ByteArray
-    
-    // Core Managers
+
     private val webSocketClient = WebSocketClient()
     private val stateManager = DefaultAudioOwnerStateManager("desktop-server", AudioRole.ACTIVE_AUDIO_OWNER)
-    
+
     private val channelCrypto = CryptoManager()
     private val reliableChannel = ReliableChannel(webSocketClient, channelCrypto, scope)
-    
+
     private val mediaObserver = DefaultDesktopMediaSessionObserver()
     private val mediaExecutor = DefaultDesktopMediaCommandExecutor()
     private val mediaPublisher = DefaultDesktopMediaStatePublisher(reliableChannel)
@@ -74,25 +118,32 @@ class DesktopAppServer(private val port: Int) {
     private lateinit var notificationManager: DesktopNotificationManager
     private lateinit var switchManager: DefaultSourceSwitchManager
 
-    // Server-side Handshake State
     private var clientIdentityPub: ByteArray? = null
     private var activeWebSocket: WebSocket? = null
     private var isPairedAndAuthenticated = false
-    private val pinCode = "123456"
+    private val pinCode = generatePin()
     private val clientMessageCounts = java.util.concurrent.ConcurrentHashMap<WebSocket, MutableList<Long>>()
 
     private lateinit var server: WebSocketServer
     private var webServer: com.remoteaudiosync.desktop.web.DesktopWebServer? = null
 
+    fun getPinCode(): String = pinCode
+
+    private fun generatePin(): String {
+        val random = SecureRandom()
+        val pin = (100000 + random.nextInt(900000)).toString()
+        return pin
+    }
+
     fun start() {
         val (pub, priv) = getOrGenerateDesktopIdentity()
         serverIdentityPub = pub
-        
+
         serverCrypto = CryptoManager().apply {
             initIdentity(pub, priv)
         }
+        channelCrypto.initIdentity(pub, priv)
 
-        // Initialize media manager
         mediaManager = DesktopMediaManager(
             reliableChannel,
             mediaObserver,
@@ -115,13 +166,19 @@ class DesktopAppServer(private val port: Int) {
             println("[ROLE] Desktop transitioned to role: $newRole")
         }
 
-        // Setup custom sender on our mock client representation
-        webSocketClient.customSender = { msg ->
-            activeWebSocket?.send(msg)
-        }
+        webSocketClient.setServerConnected(true)
 
         server = object : WebSocketServer(InetSocketAddress(port)) {
             override fun onOpen(conn: WebSocket, handshake: ClientHandshake) {
+                val origin = handshake.getFieldValue("Origin")
+                if (origin != null && !origin.contains("localhost") && !origin.contains("127.0.0.1") && !origin.contains("::1")) {
+                    val allowedPrefixes = listOf("http://localhost", "http://127.0.0.1", "file://", "http://[::1]")
+                    if (allowedPrefixes.none { origin.startsWith(it) }) {
+                        println("[SERVER] Rejecting connection from untrusted origin: $origin")
+                        conn.close(1008, "Untrusted origin")
+                        return
+                    }
+                }
                 if (activeWebSocket != null && activeWebSocket != conn) {
                     println("[SERVER] Rejecting secondary connection from ${conn.remoteSocketAddress}")
                     conn.close(1013, "Server busy with active client")
@@ -137,7 +194,6 @@ class DesktopAppServer(private val port: Int) {
                 if (activeWebSocket == conn) {
                     activeWebSocket = null
                     isPairedAndAuthenticated = false
-                    webSocketClient.setServerConnected(false)
                     reliableChannel.disconnect()
                     println("\n[SERVER] Android client disconnected")
                 }
@@ -145,9 +201,9 @@ class DesktopAppServer(private val port: Int) {
 
             override fun onMessage(conn: WebSocket, message: String) {
                 if (activeWebSocket != conn) return
-                
+
                 if (message.length > 65536) {
-                    println("[SERVER] Rejected oversized message of length ${message.length} from connection")
+                    println("[SERVER] Rejected oversized message")
                     conn.close(1009, "Message too large")
                     return
                 }
@@ -157,33 +213,31 @@ class DesktopAppServer(private val port: Int) {
                 synchronized(list) {
                     list.removeIf { now - it > 60000L }
                     if (list.size >= 120) {
-                        println("[SERVER] Rate limit exceeded for client connection. Closing.")
+                        println("[SERVER] Rate limit exceeded")
                         conn.close(1008, "Rate limit exceeded")
                         return
                     }
                     list.add(now)
                 }
-                
+
                 if (!isPairedAndAuthenticated) {
                     handleHandshakeMessage(conn, message)
                 } else {
-                    webSocketClient.feedIncomingMessage(message)
+                    webSocketClient.sendMessage(message)
                 }
             }
 
             override fun onError(conn: WebSocket?, ex: java.lang.Exception) {
-                println("[SERVER] Error on connection ${conn?.remoteSocketAddress}: ${ex.message}")
-                ex.printStackTrace()
+                println("[SERVER] Error: ${ex.message}")
             }
 
             override fun onStart() {
                 println("[SERVER] WebSocket Server successfully launched on port $port")
             }
         }
-        
+
         server.start()
 
-        // Start collecting logs and printing events
         scope.launch {
             reliableChannel.logs.collect { log ->
                 if (!log.contains("TX HEARTBEAT") && !log.contains("RX HEARTBEAT") && !log.contains("PING") && !log.contains("PONG")) {
@@ -231,7 +285,13 @@ class DesktopAppServer(private val port: Int) {
             return
         }
 
-        val packet = deserializeResult.data
+        val validateResult = PacketValidator.validate(deserializeResult.data)
+        if (validateResult is ProtocolResult.Failure) {
+            println("[HANDSHAKE] Validation failed: ${validateResult.error.message}")
+            return
+        }
+        val packet = (validateResult as ProtocolResult.Success).data
+
         when (packet.packetType) {
             PacketType.PAIR_REQUEST -> {
                 val payload = packet.payload as? PairRequestPayload
@@ -243,7 +303,7 @@ class DesktopAppServer(private val port: Int) {
                 if (payload.pin == pinCode) {
                     clientIdentityPub = Base64.getDecoder().decode(payload.publicKey)
                     println("[HANDSHAKE] PIN matched successfully! Sending PAIR_RESPONSE ACCEPTED")
-                    
+
                     val responsePayload = PairResponsePayload(
                         status = "ACCEPTED",
                         publicKey = Base64.getEncoder().encodeToString(serverIdentityPub)
@@ -262,7 +322,6 @@ class DesktopAppServer(private val port: Int) {
                         conn.send(serializeResult.data)
                     }
 
-                    // Send ACK for PAIR_REQUEST
                     val ackPacket = Packet(
                         version = 1,
                         id = UUID.randomUUID().toString(),
@@ -296,7 +355,6 @@ class DesktopAppServer(private val port: Int) {
                         conn.send(serializeResult.data)
                     }
 
-                    // Send ACK for PAIR_REQUEST
                     val ackPacket = Packet(
                         version = 1,
                         id = UUID.randomUUID().toString(),
@@ -355,8 +413,7 @@ class DesktopAppServer(private val port: Int) {
                 if (serializeResult is ProtocolResult.Success) {
                     conn.send(serializeResult.data)
                 }
-                
-                // Send ACK for AUTH_REQUEST
+
                 val ackPacket = Packet(
                     version = 1,
                     id = UUID.randomUUID().toString(),
@@ -371,37 +428,21 @@ class DesktopAppServer(private val port: Int) {
                     conn.send(ackResult.data)
                 }
 
-                // Complete session key derivation!
-                println("[DEBUG] Calling serverCrypto.deriveSessionKey...")
                 serverCrypto.deriveSessionKey(ephPubBytes)
-                println("[DEBUG] Returned from serverCrypto.deriveSessionKey!")
-                println("[HANDSHAKE] Derived shared symmetric key successfully!")
-
-                println("[DEBUG] Upgrading channel...")
-                // Upgrade our channel to encrypted reliable mode!
-                channelCrypto.initIdentity(serverIdentityPub, ByteArray(0))
-                println("[DEBUG] Initialized channel identity.")
-                // Inject Derived Session Key directly to our shared ReliableChannel's CryptoManager!
                 if (serverCrypto.sessionKey != null) {
-                    channelCrypto.setSessionKeyDirectly(serverCrypto.sessionKey!!)
-                    println("[DEBUG] Injected session key into channel.")
+                    channelCrypto.clearSessionKey()
+                    channelCrypto.sessionKey = serverCrypto.sessionKey
+                    println("[DEBUG] Derived session key propagated to channel.")
                 } else {
-                    println("[ERROR] serverCrypto.sessionKey is NULL! Cannot inject into channelCrypto!")
+                    println("[ERROR] sessionKey is NULL after derivation!")
+                    return
                 }
 
-                println("[DEBUG] Setting isPairedAndAuthenticated...")
                 isPairedAndAuthenticated = true
-                println("[DEBUG] isPairedAndAuthenticated is now true!")
-                
                 reliableChannel.setAuthenticated(true)
-                
-                println("[DEBUG] Calling webSocketClient.setServerConnected(true)...")
-                webSocketClient.setServerConnected(true)
-                println("[DEBUG] Returned from setServerConnected(true)!")
-                
+
                 println("[HANDSHAKE] Secure session fully established with Android client!")
 
-                // Send DeviceInfo from Desktop Server to Android Client
                 val desktopModel = System.getProperty("os.name") ?: "Desktop Server"
                 val desktopOs = System.getProperty("os.version") ?: "1.0"
                 val deviceInfoPayload = DeviceInfoPayload(
@@ -419,7 +460,7 @@ class DesktopAppServer(private val port: Int) {
                     payload = deviceInfoPayload
                 )
                 scope.launch {
-                    delay(500) // Small delay to let client update connection state first
+                    delay(500)
                     reliableChannel.send(infoPacket)
                     println("[HANDSHAKE] Sent Desktop DeviceInfo to Android client: $desktopModel ($desktopOs)")
                 }
@@ -455,12 +496,10 @@ class DesktopAppServer(private val port: Int) {
         notificationManager.stop()
     }
 
-    // Web Server accessors
     fun isConnected(): Boolean = isPairedAndAuthenticated
     fun isAudioOwner(): Boolean = stateManager.currentRole.value == AudioRole.ACTIVE_AUDIO_OWNER
     fun getMediaState(): MediaStatePayload? = mediaManager.mediaState.value
 
-    // CLI actions
     fun triggerPlay() {
         mediaManager.sendCommand("PLAY")
     }
@@ -550,7 +589,7 @@ fun main() {
     appServer.start()
 
     println("\n[CONSOLE] Interactive Shell ready. Type 'help' to see controls.")
-    println("[CONSOLE] Listening on Port: 8765 | PIN Code: 123456\n")
+    println("[CONSOLE] Listening on Port: 8765 | PIN Code: ${appServer.getPinCode()}\n")
 
     val reader = java.io.BufferedReader(java.io.InputStreamReader(System.`in`))
     while (true) {

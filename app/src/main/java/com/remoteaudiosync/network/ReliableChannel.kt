@@ -4,6 +4,7 @@ import com.remoteaudiosync.crypto.CryptoManager
 import com.remoteaudiosync.protocol.Packet
 import com.remoteaudiosync.protocol.PacketCodec
 import com.remoteaudiosync.protocol.PacketType
+import com.remoteaudiosync.protocol.PacketValidator
 import com.remoteaudiosync.protocol.ProtocolResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -45,7 +46,6 @@ open class ReliableChannel(
     )
 
     private val doNotAckTypes = setOf(
-        PacketType.MEDIA_STATE,
         PacketType.HEARTBEAT,
         PacketType.PING,
         PacketType.PONG,
@@ -53,12 +53,11 @@ open class ReliableChannel(
         PacketType.PAIR_RESPONSE,
         PacketType.AUTH_REQUEST,
         PacketType.AUTH_SUCCESS,
-        PacketType.DEVICE_INFO,
         PacketType.ERROR
     )
 
     private val pendingAcks = ConcurrentHashMap<String, Job>()
-    
+
     private var heartbeatJob: Job? = null
     private var heartbeatMonitorJob: Job? = null
     private var lastHeartbeatReceived = 0L
@@ -103,7 +102,6 @@ open class ReliableChannel(
                 try {
                     handleIncomingMessage(message)
                 } catch (e: Exception) {
-                    e.printStackTrace()
                     log("Exception handling message: ${e.message}")
                 }
             }
@@ -123,34 +121,46 @@ open class ReliableChannel(
     private fun handleIncomingMessage(message: String) {
         val deserializeResult = PacketCodec.deserialize(message)
         if (deserializeResult !is ProtocolResult.Success) {
-            log("Unknown packet")
+            log("Malformed packet received")
             return
         }
 
         var packet = deserializeResult.data
 
+        val validateResult = PacketValidator.validate(packet)
+        if (validateResult is ProtocolResult.Failure) {
+            log("Packet validation failed: ${validateResult.error.message}")
+            return
+        }
+        packet = (validateResult as ProtocolResult.Success).data
+
         if (packet.ciphertext != null) {
             val decryptResult = PacketCodec.decryptPayload(packet, cryptoManager)
             if (decryptResult is ProtocolResult.Success) {
                 packet = decryptResult.data
+            } else {
+                log("Decryption failed")
+                return
             }
         }
 
         when (packet.packetType) {
             PacketType.HEARTBEAT -> {
                 lastHeartbeatReceived = timeProvider()
-                // Do NOT ACK HEARTBEAT
             }
             PacketType.ACK -> {
                 val ackId = (packet.payload as? com.remoteaudiosync.protocol.AckPayload)?.originalPacketId
-                if (ackId != null && pendingAcks.containsKey(ackId)) {
-                    pendingAcks.remove(ackId)?.cancel()
-                    log("RX ACK")
-                    if (_connectionState.value is ConnectionState.WaitingForAck) {
-                        _connectionState.value = ConnectionState.Connected
+                if (ackId != null) {
+                    val job = pendingAcks.remove(ackId)
+                    if (job != null) {
+                        job.cancel()
+                        log("RX ACK")
+                        if (_connectionState.value is ConnectionState.WaitingForAck) {
+                            _connectionState.value = ConnectionState.Connected
+                        }
+                    } else {
+                        log("Duplicate ACK")
                     }
-                } else {
-                    log("Duplicate ACK")
                 }
             }
             else -> {
@@ -188,26 +198,26 @@ open class ReliableChannel(
     open suspend fun sendWithAck(packet: Packet): Boolean {
         var retries = 0
         while (retries <= 2) {
+            val job = Job()
+            pendingAcks[packet.id] = job
             sendInternal(packet)
             _connectionState.value = ConnectionState.WaitingForAck
 
-            val ackReceived = withTimeoutOrNull(800L) {
-                val job = coroutineScope.launch { delay(800L) }
-                pendingAcks[packet.id] = job
+            val ackReceived = withTimeoutOrNull(1500L) {
                 job.join()
-                // If it was cancelled, it means we got an ACK
-                job.isCancelled
+                !job.isActive
             } ?: false
+
+            pendingAcks.remove(packet.id)
 
             if (ackReceived) {
                 return true
             }
-            
-            pendingAcks.remove(packet.id)
+
             retries++
         }
-        
-        log("Packet dropped")
+
+        log("Packet dropped after retries")
         _connectionState.value = ConnectionState.Failed("Retry limit exhausted")
         return false
     }
@@ -222,25 +232,25 @@ open class ReliableChannel(
         var finalPacket = packet
         if (cryptoManager.sessionKey != null && packet.packetType !in setOf(
                 PacketType.PAIR_REQUEST, PacketType.PAIR_RESPONSE, PacketType.AUTH_REQUEST, PacketType.AUTH_SUCCESS
-            ) && packet.packetType != PacketType.ACK && packet.packetType != PacketType.HEARTBEAT) {
+            )) {
             val encryptResult = PacketCodec.encryptPayload(packet, cryptoManager)
             if (encryptResult is ProtocolResult.Success) {
                 finalPacket = encryptResult.data
             }
         }
-        
+
         val serialized = PacketCodec.serialize(finalPacket)
         if (serialized is ProtocolResult.Success) {
             webSocketClient.sendMessage(serialized.data)
             log("TX ${packet.packetType}")
         } else {
-            println("[PROTO-ERR] Serialization failed: ${serialized}")
+            log("Serialization failed")
         }
     }
 
     private fun startHeartbeat() {
         lastHeartbeatReceived = timeProvider()
-        
+
         heartbeatJob?.cancel()
         heartbeatJob = coroutineScope.launch {
             while (isActive) {
@@ -257,7 +267,7 @@ open class ReliableChannel(
                 sendInternal(heartbeatPacket)
             }
         }
-        
+
         heartbeatMonitorJob?.cancel()
         heartbeatMonitorJob = coroutineScope.launch {
             while (isActive) {
