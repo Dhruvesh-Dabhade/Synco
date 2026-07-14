@@ -1,0 +1,60 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:7:27 Unresolved reference 'media'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:8:27 Unresolved reference 'media'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:9:27 Unresolved reference 'media'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:10:27 Unresolved reference 'media'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:41:35 Unresolved reference 'MediaControllerCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:51:47 Unresolved reference 'MediaControllerCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:52:9 'onPlaybackStateChanged' overrides nothing.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:52:52 Unresolved reference 'PlaybackStateCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:55:9 'onMetadataChanged' overrides nothing.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:55:50 Unresolved reference 'MediaMetadataCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:81:31 Unresolved reference 'unregisterCallback'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:99:27 Unresolved reference 'unregisterCallback'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:103:13 Unresolved reference 'MediaControllerCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:103:44 Unresolved reference 'MediaSessionCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:106:27 Unresolved reference 'registerCallback'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:126:35 Unresolved reference 'metadata'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:127:34 Unresolved reference 'playbackState'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:129:41 Unresolved reference 'MediaMetadataCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:130:42 Unresolved reference 'MediaMetadataCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:131:42 Unresolved reference 'MediaMetadataCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:133:43 Unresolved reference 'PlaybackStateCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:136:34 Unresolved reference 'packageName'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:152:49 Unresolved reference 'MediaControllerCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:152:67 Unresolved reference 'playbackState'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:152:91 Unresolved reference 'PlaybackStateCompat'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:232:41 Unresolved reference 'transportControls'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:233:42 Unresolved reference 'transportControls'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:234:41 Unresolved reference 'transportControls'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:235:45 Unresolved reference 'transportControls'.
+e: file:///app/applet/app/src/main/java/com/remoteaudiosync/manager/MediaManager.kt:236:69 Unresolved reference 'transportControls'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 16s
+9 actionable tasks: 1 executed, 8 up-to-date
+Configuration cache entry reused.

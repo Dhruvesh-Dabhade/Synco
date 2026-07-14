@@ -1,0 +1,75 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- Subtle circular border -->
+    <path
+        android:pathData="M256,58a198,198 0,1 0,0 396a198,198 0,1 0,0 -396Z"
+        android:strokeColor="#1A1A1E"
+        android:strokeWidth="4"
+        android:fillColor="#00000000" />
+
+    <!-- Gear Frame with Cyan Stroke -->
+    <path
+        android:pathData="M256,100C248.8,100 242.4,105.6 240.8,112.8L236.8,132.8C222.4,136 208.8,141.6 196.8,149.6L180,137.6C174.4,133.6 166.4,134.4 161.6,139.2L139.2,161.6C134.4,166.4 133.6,174.4 137.6,180L149.6,196.8C141.6,208.8 136,222.4 132.8,236.8L112.8,240.8C105.6,242.4 100,248.8 100,256C100,263.2 105.6,269.6 112.8,271.2L132.8,275.2C136,289.6 141.6,303.2 149.6,315.2L137.6,332C133.6,337.6 134.4,345.6 139.2,350.4L161.6,372.8C166.4,377.6 174.4,378.4 180,374.4L196.8,362.4C208.8,370.4 222.4,376 236.8,379.2L240.8,399.2C242.4,406.4 248.8,412 256,412C263.2,412 269.6,406.4 271.2,399.2L275.2,379.2C289.6,376 303.2,370.4 315.2,362.4L332,374.4C337.6,378.4 345.6,377.6 350.4,372.8L372.8,350.4C377.6,345.6 378.4,337.6 374.4,332L362.4,315.2C370.4,303.2 376,289.6 379.2,275.2L399.2,271.2C406.4,269.6 412,263.2 412,256C412,248.8 406.4,242.4 399.2,240.8L379.2,236.8C376,222.4 370.4,208.8 362.4,196.8L374.4,180C378.4,174.4 377.6,166.4 372.8,161.6L350.4,139.2C345.6,134.4 337.6,133.6 332,137.6L315.2,149.6C303.2,141.6 289.6,136 275.2,132.8L271.2,112.8C269.6,105.6 263.2,100 256,100Z"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Thin inner circular details -->
+    <path
+        android:pathData="M256,160C202.981,160 160,202.981 160,256C160,309.019 202.981,352 256,352C309.019,352 352,309.019 352,256C352,202.981 309.019,160 256,160Z"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.3"
+        android:fillColor="#00000000" />
+
+    <!-- Glow for Technical S -->
+    <path
+        android:pathData="M310,210C310,190 290,180 260,180C220,180 200,200 200,220C200,240 220,250 260,260C300,270 320,280 320,310C320,340 290,360 250,360C210,360 190,340 190,320"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="24"
+        android:strokeAlpha="0.15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Main Technical S -->
+    <path
+        android:pathData="M310,210C310,190 290,180 260,180C220,180 200,200 200,220C200,240 220,250 260,260C300,270 320,280 320,310C320,340 290,360 250,360C210,360 190,340 190,320"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="14"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Circuit Dot on S (Top) -->
+    <path
+        android:pathData="M310,204a6,6 0,1 0,0 12a6,6 0,1 0,0 -12Z"
+        android:fillColor="#0A0A0B"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="3" />
+
+    <!-- Circuit Dot on S (Bottom) -->
+    <path
+        android:pathData="M190,314a6,6 0,1 0,0 12a6,6 0,1 0,0 -12Z"
+        android:fillColor="#0A0A0B"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="3" />
+
+    <!-- Circuit Dot on S (Center) -->
+    <path
+        android:pathData="M260,266a4,4 0,1 0,0 8a4,4 0,1 0,0 -8Z"
+        android:fillColor="#00F0FF" />
+
+    <!-- Inner Detail Connection Lines -->
+    <path
+        android:pathData="M240,255L280,265"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.5" />
+</vector>

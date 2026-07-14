@@ -1,0 +1,65 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugNavigationResources UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compileDebugNavigationResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:generateDebugRFile UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugUnitTestManifest UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:generateDebugUnitTestConfig UP-TO-DATE
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:hiltCollectClassesDebug
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+> Task :app:hiltJavaCompileDebug NO-SOURCE
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:transformDebugClassesWithAsm
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:kspDebugUnitTestKotlin
+
+> Task :app:compileDebugUnitTestKotlin
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ConnectionStateTest.kt:19:28 Check for instance is always 'true'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:53:47 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:77:47 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:104:52 Unchecked cast of 'Any!' to 'MutableStateFlow<ConnectionState>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:121:52 Unchecked cast of 'Any!' to 'MutableStateFlow<ConnectionState>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:147:47 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:173:47 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:177:53 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:198:47 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+w: file:///app/applet/app/src/test/java/com/remoteaudiosync/network/ReliableChannelTest.kt:202:53 Unchecked cast of 'Any!' to 'MutableSharedFlow<String>'.
+
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltCollectClassesDebugUnitTest
+> Task :app:hiltAggregateDepsDebugUnitTest UP-TO-DATE
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:transformDebugUnitTestClassesWithAsm
+> Task :app:testDebugUnitTest
+> Task :app:finalizeTestRoborazziDebug SKIPPED
+
+BUILD SUCCESSFUL in 47s
+37 actionable tasks: 9 executed, 28 up-to-date
+Configuration cache entry reused.
+STATUS: 0

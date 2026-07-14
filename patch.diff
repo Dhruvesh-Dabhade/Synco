@@ -1,0 +1,12 @@
+--- app/src/main/java/com/remoteaudiosync/network/WebSocketClient.kt
++++ app/src/main/java/com/remoteaudiosync/network/WebSocketClient.kt
+@@ -19,2 +19,5 @@
+     val logs = _logs.asSharedFlow()
++    
++    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 100)
++    val messages = _messages.asSharedFlow()
+ 
+@@ -37,2 +40,3 @@
+             override fun onMessage(webSocket: WebSocket, text: String) {
++                _messages.tryEmit(text)
+                 addLog("onMessage: $text")
