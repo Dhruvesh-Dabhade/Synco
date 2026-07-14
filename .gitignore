@@ -18,3 +18,10 @@ local.properties
 .env.local
 .env.*.local
 debug.keystore
+
+# Build artifacts
+*.jar
+desktop/build/
+
+# Raw unencrypted key files (encrypted .keys.enc is safe for commit)
+*.key
