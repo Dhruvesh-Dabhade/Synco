@@ -6,6 +6,16 @@ Designed with an executive-class, cinema-inspired **Material 3 UI**, Synco utili
 
 ---
 
+## 📱 Screenshots
+
+<p align="center">
+  <img src="assets/mobile-app.png" alt="Synco Android App" width="250"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/desktop-app.png" alt="Synco Desktop Companion" width="500"/>
+</p>
+
+---
+
 ## 🏗️ System Architecture
 
 Synco is built using a modern decoupled architecture consisting of two major modules:

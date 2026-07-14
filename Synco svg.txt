@@ -1,7 +1,3 @@
-## 🎨 6. App Logo (Custom SVG Asset)
-
-Below is the production-ready SVG code for the **Synco App Logo**. You can save this code as `logo.svg` to upload as your GitHub project logo or social preview banner:
-
 ```xml
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <!-- Background Slate -->
