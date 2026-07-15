@@ -110,14 +110,23 @@ class DefaultAndroidCallManager(
 
         incomingPacketsJob = coroutineScope.launch {
             reliableChannel.incomingPackets.collect { packet ->
-                if (packet.packetType == PacketType.CALL_COMMAND) {
-                    val payload = packet.payload as? CallCommandPayload
-                    if (payload != null) {
-                        // Remote commanded us to execute
-                        if (stateManager.currentRole.value == AudioRole.ACTIVE_AUDIO_OWNER) {
-                            executeLocally(payload.command)
+                when (packet.packetType) {
+                    PacketType.CALL_COMMAND -> {
+                        val payload = packet.payload as? CallCommandPayload
+                        if (payload != null) {
+                            if (stateManager.currentRole.value == AudioRole.ACTIVE_AUDIO_OWNER) {
+                                executeLocally(payload.command)
+                            }
                         }
                     }
+                    PacketType.CALL_STATE -> {
+                        val payload = packet.payload as? CallStatePayload
+                        if (payload != null && packet.senderId != stateManager.deviceId) {
+                            _callState.value = payload.state
+                            _callerId.value = payload.callerId
+                        }
+                    }
+                    else -> {}
                 }
             }
         }

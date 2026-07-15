@@ -39,9 +39,11 @@ object PacketValidator {
             return ProtocolResult.Failure(ProtocolError.InvalidReceiver("Receiver ID must be valid and <= 100 characters"))
         }
 
-        val payloadError = validatePayload(packet.packetType, packet.payload)
-        if (payloadError != null) {
-            return ProtocolResult.Failure(payloadError)
+        if (packet.ciphertext == null) {
+            val payloadError = validatePayload(packet.packetType, packet.payload)
+            if (payloadError != null) {
+                return ProtocolResult.Failure(payloadError)
+            }
         }
 
         return ProtocolResult.Success(packet)

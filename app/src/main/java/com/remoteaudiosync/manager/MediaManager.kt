@@ -210,9 +210,14 @@ class MediaManager(
         updateJob = null
     }
 
+    private var lastPublishedKey: String? = null
+
     private fun publishMediaState(state: MediaStatePayload?) {
         if (!reliableChannel.isAuthenticated.value) return
         val payload = state ?: MediaStatePayload("NO_ACTIVE_MEDIA_SESSION", "", false, 0, 0, "")
+        val key = "${payload.title}|${payload.artist}|${payload.isPlaying}|${payload.position}|${payload.volume}"
+        if (key == lastPublishedKey) return
+        lastPublishedKey = key
         val packet = Packet(
             version = 1,
             id = UUID.randomUUID().toString(),
@@ -230,11 +235,9 @@ class MediaManager(
             reliableChannel.incomingPackets.collect { packet ->
                 when (packet.packetType) {
                     PacketType.MEDIA_COMMAND -> {
-                        if (isAudioOwner) {
-                            val payload = packet.payload as? MediaCommandPayload
-                            if (payload != null) {
-                                executeCommand(payload)
-                            }
+                        val payload = packet.payload as? MediaCommandPayload
+                        if (payload != null) {
+                            executeCommand(payload)
                         }
                     }
                     PacketType.MEDIA_STATE -> {
@@ -284,6 +287,14 @@ class MediaManager(
             "SEEK" -> payload.seekPosition?.let { controller?.transportControls?.seekTo(it) }
             "VOLUME_UP" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
             "VOLUME_DOWN" -> audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            "SET_VOLUME" -> {
+                val vol = payload.volume
+                if (vol != null) {
+                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    val targetVol = (vol * maxVol / 100).coerceIn(0, maxVol)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, AudioManager.FLAG_SHOW_UI)
+                }
+            }
             "MUTE" -> {
                 val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
                 audioManager.adjustStreamVolume(

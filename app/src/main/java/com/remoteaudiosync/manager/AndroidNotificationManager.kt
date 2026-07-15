@@ -42,6 +42,7 @@ class DefaultAndroidNotificationManager(
 
     private val sentNotificationHashes = mutableMapOf<String, Int>()
     private var connectionStateJob: Job? = null
+    private var incomingPacketsJob: Job? = null
 
     private val notificationServiceListener = object : MediaNotificationListenerService.NotificationListener {
         override fun onNotificationPosted(
@@ -114,6 +115,25 @@ class DefaultAndroidNotificationManager(
 
         MediaNotificationListenerService.listener = notificationServiceListener
 
+        incomingPacketsJob = coroutineScope.launch {
+            reliableChannel.incomingPackets.collect { packet ->
+                if (packet.packetType == PacketType.NOTIFICATION_STATE && packet.senderId != stateManager.deviceId) {
+                    val payload = packet.payload as? NotificationStatePayload
+                    if (payload != null) {
+                        when (payload.action) {
+                            "ADDED", "UPDATED" -> {
+                                val updatedList = _activeNotifications.value.filter { it.id != payload.id } + payload
+                                _activeNotifications.value = updatedList
+                            }
+                            "REMOVED" -> {
+                                _activeNotifications.value = _activeNotifications.value.filter { it.id != payload.id }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         connectionStateJob = coroutineScope.launch {
             reliableChannel.connectionState.collect { connState ->
                 if (connState is ConnectionState.Connected) {
@@ -128,6 +148,8 @@ class DefaultAndroidNotificationManager(
 
     override fun stop() {
         MediaNotificationListenerService.listener = null
+        incomingPacketsJob?.cancel()
+        incomingPacketsJob = null
         connectionStateJob?.cancel()
         connectionStateJob = null
     }

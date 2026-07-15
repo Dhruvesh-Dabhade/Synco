@@ -53,7 +53,12 @@ open class ReliableChannel(
         PacketType.PAIR_RESPONSE,
         PacketType.AUTH_REQUEST,
         PacketType.AUTH_SUCCESS,
-        PacketType.ERROR
+        PacketType.ERROR,
+        PacketType.MEDIA_STATE,
+        PacketType.CALL_STATE,
+        PacketType.NOTIFICATION_STATE,
+        PacketType.BATTERY_STATE,
+        PacketType.DEVICE_INFO
     )
 
     private val pendingAcks = ConcurrentHashMap<String, Job>()

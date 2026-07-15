@@ -81,7 +81,7 @@ class DesktopWebServer(
 
             val csp = buildString {
                 append("default-src 'self'; ")
-                append("script-src 'self' 'sha256-+6WnXIl4mbFTCARd8N3COQmT3bJJmoQVtv4g2PqRq1M=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; ")
+                append("script-src 'self' 'unsafe-inline'; ")
                 append("style-src 'self' 'unsafe-inline'; ")
                 append("font-src 'self'; ")
                 append("connect-src 'self'; ")
@@ -179,7 +179,11 @@ class DesktopWebServer(
 
         scope.launch {
             while (true) {
-                broadcastState()
+                try {
+                    broadcastState()
+                } catch (e: Exception) {
+                    System.err.println("[WEB] broadcastState error: ${e.message}")
+                }
                 delay(1000)
             }
         }
@@ -220,7 +224,11 @@ class DesktopWebServer(
     }
 
     private fun sendStateToClient(ctx: WsContext) {
-        ctx.send(getStateJson())
+        try {
+            ctx.send(getStateJson())
+        } catch (e: Exception) {
+            System.err.println("[WEB] sendStateToClient error: ${e.message}")
+        }
     }
 
     private fun broadcastState() {
@@ -395,6 +403,13 @@ class DesktopWebServer(
         }
     }
 
+    function sendJson(data) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(data));
+            addLog('Sent: ' + JSON.stringify(data));
+        }
+    }
+
     function togglePlay() {
         sendCmd(isPlaying ? 'PAUSE' : 'PLAY');
     }
@@ -402,15 +417,15 @@ class DesktopWebServer(
     function setVolume(val) {
         volume = val;
         document.getElementById('vol-display').textContent = val + '%';
-        sendCmd(JSON.stringify({command: 'VOLUME', value: parseInt(val)}));
+        sendJson({command: 'VOLUME', value: parseInt(val)});
     }
 
     function simulateCall() {
-        sendCmd(JSON.stringify({command: 'SIMULATE_CALL', state: 'RINGING', callerId: 'Simulated Call'}));
+        sendJson({command: 'SIMULATE_CALL', state: 'RINGING', callerId: 'Simulated Call'});
     }
 
     function simulateNotification() {
-        sendCmd(JSON.stringify({command: 'SIMULATE_NOTIF', action: 'RECEIVE', id: 'sim_1', title: 'Test Notification', text: 'This is a simulated notification.'}));
+        sendJson({command: 'SIMULATE_NOTIF', action: 'RECEIVE', id: 'sim_1', title: 'Test Notification', text: 'This is a simulated notification.'});
     }
 
     connectWs();

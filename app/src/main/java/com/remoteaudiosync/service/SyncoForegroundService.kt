@@ -13,6 +13,11 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.remoteaudiosync.MainActivity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class SyncoForegroundService : Service() {
 
@@ -24,6 +29,7 @@ class SyncoForegroundService : Service() {
     }
 
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wakeLockRefreshJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -80,12 +86,24 @@ class SyncoForegroundService : Service() {
                 PowerManager.PARTIAL_WAKE_LOCK,
                 "Synco::BackgroundSyncWakeLock"
             ).apply {
-                acquire(600000L)
+                acquire()
+            }
+        }
+        wakeLockRefreshJob?.cancel()
+        wakeLockRefreshJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            while (true) {
+                kotlinx.coroutines.delay(240000L)
+                if (wakeLock?.isHeld == true) {
+                    wakeLock?.release()
+                    wakeLock?.acquire()
+                }
             }
         }
     }
 
     private fun releaseWakeLock() {
+        wakeLockRefreshJob?.cancel()
+        wakeLockRefreshJob = null
         if (wakeLock?.isHeld == true) {
             wakeLock?.release()
         }

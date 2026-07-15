@@ -1,6 +1,6 @@
 # Synco 🎧 | Unified Remote Audio & System Sync
 
-An advanced, security-hardened, and highly polished system bridging your **Android device** with a **Desktop host** via real-time WebSocket communication. **Synco** provides dynamic media telemetry, notification mirroring, phone state tracking, audio routing supervision, and cryptographic secure pairing.
+An advanced, security-hardened system bridging your **Android device** with a **Desktop host** via real-time WebSocket communication over **Wi-Fi or phone hotspot**. Synco provides dynamic media telemetry, notification mirroring, phone state tracking, audio routing supervision, and cryptographic secure pairing.
 
 Designed with an executive-class, cinema-inspired **Material 3 UI**, Synco utilizes a zero-trust handshake model to ensure all system sync metrics remain completely private, secure, and low-latency.
 
@@ -56,7 +56,7 @@ Security is at the foundation of Synco. Communication uses a robust Zero-Trust h
 - **Nonce Reuse Protection**: AES-GCM nonces are tracked in a thread-safe set (capped at 100K) to prevent replay and nonce reuse attacks.
 - **Clock Skew Mitigation**: Packet timestamps are validated against a 5-minute (300,000ms) maximum drift window to completely eliminate replay attacks.
 - **Payload Length Restrictions**: Heavy payloads or oversized packets are blocked at the socket level. Handshake values, Sender/Receiver IDs, and packet identifiers have a strict limit of 100 characters. Single message sizes exceeding 65KB are automatically dropped.
-- **WebSocket Rate-Limiting**: The desktop server rate-limits WebSocket messages to 120 per minute per connection. The web dashboard also rate-limits HTTP and WebSocket requests per IP.
+- **WebSocket Rate-Limiting**: The desktop server rate-limits WebSocket messages to 300 per minute per connection (tuned for realistic media state traffic).
 - **TLS v1.2+ with Origin Validation**: All WebSocket connections enforce origin checks. Desktop identity keys are stored AES-256-GCM encrypted on disk.
 - **Web Dashboard Auth Token**: The web control panel requires a random 32-byte Base64URL auth token printed at startup.
 
@@ -64,32 +64,47 @@ Security is at the foundation of Synco. Communication uses a robust Zero-Trust h
 
 ## ✨ Key Features
 
-### 1. Dynamic Audio Routing & Device Monitoring
+### 1. Dual Connectivity — WiFi & Hotspot
+- Connect over **same Wi-Fi network** (router) or **phone hotspot** (phone as access point).
+- Desktop auto-accepts connections from private IP ranges (`10.x`, `172.x`, `192.168.x`).
+- The app automatically reconnects on heartbeat timeout or network switch.
+
+### 2. Dynamic Audio Routing & Device Monitoring
 - Monitor current active output peripherals (Built-in Speakers, Wired Headphones, or Bluetooth headsets) dynamically.
-- Gracefully request and surrender system audio ownership.
+- Gracefully request and surrender system audio ownership with role switching.
 - View linked wireless devices directly from the UI.
+- Commands respect current ownership: desktop-owner → executes locally, phone-owner → sends to phone.
 
-### 2. Low-Latency Media Telemetry & Interception
+### 3. Low-Latency Media Telemetry & Interception
 - Stream high-fidelity album art, active player names, track durations, and playback progress indicators between the host and client.
-- Universal media commands: Play, Pause, Skip, and Seek.
+- Universal media commands: Play, Pause, Skip (Next/Previous), and Volume control.
+- Deduplicated media state updates — only publishes when title, artist, play-state, position, or volume changes.
 
-### 3. Native Phone Call & Notification Mirroring
+### 4. Native Phone Call & Notification Mirroring
 - Intercept and securely forward notifications from selected apps to the desktop screen immediately.
 - Real-time caller identity translation, active call state updates, and ring detection mapped straight to the desktop terminal.
 
-### 4. Executive Material 3 Design
+### 5. Simulation Controls (Web Dashboard)
+- Test call and notification mirroring with simulated events.
+- Role switch, volume slider, and media transport controls.
+- `Switch Audio Role` to toggle which device controls playback.
+
+### 6. Executive Material 3 Design
 - **Perfect Circle Avatars**: Highly-polished circular profile avatars with dynamic linear-gradient glowing borders.
 - **Custom Initials Parsing**: Automatically parses user initials (e.g., "John Doe" ➔ "JD", "Synco User" ➔ "SU") to display as custom initials on the dashboard header.
 - **Glassmorphic Layouts**: Smooth transparent cards styled with Material Design 3 spacing guidelines (8dp grid spacing) and clean typography.
 - **Unified Settings Center**: Toggle app preferences, background service lifecycles, and edit your user profile display name dynamically.
+
+### 7. Persistent Background Connection
+- Foreground service with indefinite wake lock (refreshed every 4 min) keeps the Android app connected in the background.
+- Automatic reconnection on network loss with exponential backoff.
+- Dual heartbeat mechanism (5s interval, 30s timeout) ensures timely disconnection detection.
 
 ---
 
 ## 🚀 Getting Started & Setup
 
 Deploying **Synco** is straightforward and requires zero complex configuration. 
-
-For complete step-by-step instructions—including Git repository cloning, setting up the Kotlin Desktop Server, compiling the Android `.apk` client, retrieving your local IP addresses, and pairing your device securely—please refer to our dedicated guide:
 
 👉 **[Synco Full Setup & Pairing Guide (SETUP.md)](./SETUP.md)**
 
@@ -101,9 +116,11 @@ git clone https://github.com/Dhruvesh-Dabhade/Synco.git
 cd Synco
 
 # 2. Build and launch the Desktop Companion
-gradle :desktop:installDist
-gradle :desktop:run
+gradlew :desktop:installDist
+.\build\install\Synco\Synco.bat    # Windows
+# or: build/install/Synco/bin/Synco  # Linux/macOS
 ```
+
 Upon startup, the terminal displays:
 ```
 Listening on Port: 8765 | PIN Code: 742189
@@ -111,12 +128,21 @@ Web Dashboard: http://localhost:8080?token=<32-char-base64url-token>
 ```
 
 ```bash
-# 3. Compile the Android Client app (debug)
-gradle :app:assembleDebug
-
-#    Compile the Android Client app (release — ProGuard enabled)
-gradle :app:assembleRelease
+# 3. Compile the Android Client
+gradlew :app:assembleDebug
 ```
+
+### Connection Options
+
+**Option A — Same Wi-Fi Network:**
+- Both devices on the same router.
+- Find desktop IP via `ipconfig` (Windows) or `ip a` (Linux/macOS).
+- Enter IP + port 8765 in the Android app.
+
+**Option B — Phone Hotspot:**
+- Enable hotspot on phone, connect desktop to phone's WiFi.
+- Desktop gets IP in `192.168.x.x` or `10.x.x.x` range.
+- Enter that IP + port 8765 in the Android app (same phone).
 
 ---
 

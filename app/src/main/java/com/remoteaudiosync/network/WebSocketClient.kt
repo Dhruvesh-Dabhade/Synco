@@ -50,7 +50,8 @@ class WebSocketClient {
             "$scheme://$cleanIp:$port"
         }
 
-        addLog("Connecting to $url...")
+                addLog("Connecting to $url...")
+        System.out.println("[WS] Connecting to $url")
 
         val request = Request.Builder()
             .url(url)
@@ -60,24 +61,29 @@ class WebSocketClient {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 _connectionState.value = ConnectionState.Connected
                 addLog("Connected successfully")
+                System.out.println("[WS] onOpen")
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 if (text.length > 65536) {
                     addLog("Rejected oversized message")
+                    System.out.println("[WS] Rejected oversized message")
                     return
                 }
+                System.out.println("[WS] onMessage len=${text.length}")
                 _messages.tryEmit(text)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                addLog("Closing: $code")
+                addLog("Closing: $code reason=$reason")
+                System.out.println("[WS] onClosing code=$code reason=$reason")
                 webSocket.close(1000, null)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 _connectionState.value = ConnectionState.Disconnected
-                addLog("Disconnected: $code")
+                addLog("Disconnected: $code reason=$reason")
+                System.out.println("[WS] onClosed code=$code reason=$reason")
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -85,6 +91,8 @@ class WebSocketClient {
                 val errorMsg = t.message ?: "Unknown error"
                 _connectionState.value = ConnectionState.Failed(errorMsg)
                 addLog("Connection failed: $errorMsg")
+                System.err.println("[WS] onFailure: $errorMsg")
+                t.printStackTrace(System.err)
             }
         })
     }

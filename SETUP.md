@@ -1,6 +1,6 @@
 # Synco 🎧 | Full System Integration & Setup Guide
 
-This guide provides step-by-step instructions for cloning, compiling, deploying, and pairing the **Synco Client** (Android) and **Synco Companion** (Desktop).
+This guide provides step-by-step instructions for cloning, compiling, deploying, and pairing the **Synco Client** (Android) and **Synco Companion** (Desktop) over **Wi-Fi** or **phone hotspot**.
 
 ---
 
@@ -10,7 +10,8 @@ Before starting, ensure your local development environment has the following ins
 
 - **Java Development Kit (JDK) 17 or 21**
 - **Git** (installed and added to your system environment variables)
-- **Active Local Network**: Both your Android device and Desktop computer **must be connected to the exact same Wi-Fi network / subnet** to communicate.
+- **Android Debug Bridge (ADB)** (optional — for direct APK install via USB)
+- **Network**: Both devices must be able to reach each other (same Wi-Fi **or** phone hotspot).
 
 ---
 
@@ -20,10 +21,7 @@ Before starting, ensure your local development environment has the following ins
 Open a terminal (Command Prompt, PowerShell, or Git Bash) on your computer and execute:
 
 ```bash
-# Clone the repository locally
 git clone https://github.com/Dhruvesh-Dabhade/Synco.git
-
-# Navigate into the project root directory
 cd Synco
 ```
 
@@ -31,14 +29,13 @@ cd Synco
 
 ### 💻 2. Compile and Start the Desktop Companion
 
-The Desktop Companion is a fast Kotlin server. To install dependencies and run the daemon:
-
 ```bash
-# Build and extract the companion binary distribution
-gradle :desktop:installDist
+# Build the distribution
+gradlew :desktop:installDist
 
-# Launch the server companion
-gradle :desktop:run
+# Launch the server
+.\build\install\Synco\Synco.bat      # Windows
+# or: build/install/Synco/bin/Synco  # Linux/macOS
 ```
 
 Once started, the terminal displays:
@@ -48,6 +45,8 @@ Once started, the terminal displays:
 =================================================================
 [INFO] Booting up subproject environment...
 [SERVER] WebSocket Server successfully launched on port 8765
+[WEB]  Web Dashboard running on http://localhost:8080
+[WEB]  Auth token: <32-char-base64url-token>
 [CONSOLE] Interactive Shell ready. Type 'help' to see controls.
 [CONSOLE] Listening on Port: 8765 | PIN Code: 742189
 ```
@@ -62,10 +61,10 @@ The desktop also starts a web-based control panel on port **8080**:
 - Open your browser and navigate to: **`http://localhost:8080?token=<auth-token>`**
 - The **auth token** is a random 32-byte Base64URL string printed once at startup (scroll up if missed).
 - **Without the token, the dashboard returns 401 Unauthorized.**
-- The dashboard displays connected device status, media controls, and real-time security log feeds.
+- The dashboard displays connected device status, media controls, role switch, call/notification simulation, and real-time event logs.
 
 #### Desktop Identity Keys
-- Persistent Ed25519 identity keys are stored in `desktop/desktop_identity.keys.enc`.
+- Persistent Ed25519 identity keys are stored in `desktop_identity.keys.enc`.
 - The private key is **AES-256-GCM encrypted** with a key derived from `desktop_identity.key`.
 - The raw `desktop_identity.key` is excluded from version control (listed in `.gitignore`).
 - These keys enable persistent device recognition across sessions.
@@ -74,13 +73,11 @@ The desktop also starts a web-based control panel on port **8080**:
 
 ### 🔍 3. Retrieve Your Desktop's Local IP Address
 
-To pair the Android app, you will need the local IPv4 address of your computer.
-
 #### On Windows (PowerShell/Command Prompt):
 ```powershell
 ipconfig
 ```
-Look for the active adapter (e.g., *Wireless LAN adapter Wi-Fi*) and locate the **IPv4 Address** (e.g., `192.168.1.45`).
+Look for the active adapter — either **Wireless LAN adapter Wi-Fi** (router) or **Ethernet adapter** (hotspot connection). Locate the **IPv4 Address** (e.g., `192.168.1.45` or `10.203.177.173`).
 
 #### On Linux / macOS (Terminal):
 ```bash
@@ -94,48 +91,151 @@ Look for your active wireless or ethernet adapter address (excluding `127.0.0.1`
 
 ### 📱 4. Build and Install the Android Client
 
-To compile the Android client application directly from the command line:
-
+#### Build the APK:
 ```bash
-# Compile and package the debug APK (no obfuscation)
-gradle :app:assembleDebug
-
-# Compile and package the release APK (ProGuard minification enabled)
-gradle :app:assembleRelease
+gradlew :app:assembleDebug
 ```
 
-Once completed, the compiled APKs will be located at:
-- Debug: `[Project-Root]/app/build/outputs/apk/debug/app-debug.apk`
-- Release: `[Project-Root]/app/build/outputs/apk/release/app-release.apk`
+The compiled APK will be at:
+- `app/build/outputs/apk/debug/app-debug.apk`
 
-> **Note:** The release build has **ProGuard** enabled for code obfuscation and minification. Use the debug build for testing, the release build for production deployment.
+#### Install via ADB (USB — recommended for development):
+```bash
+# Ensure USB debugging is enabled on your phone
+adb devices -l
+adb install -r -g app/build/outputs/apk/debug/app-debug.apk
+```
 
-- Transfer the `.apk` file to your Android phone via USB, wireless sharing, or cloud storage.
-- Open the file on your device to install it (ensure you grant installation permissions for unknown sources if prompted).
+#### Install manually (no ADB):
+Transfer the `.apk` file to your phone via USB, wireless sharing, or cloud storage. Open the file on your device to install it (enable **Install from unknown sources** if prompted).
 
 ---
 
-## 🤝 5. Securing the Wireless Connection
+## 🌐 5. Connection Options
 
-Synco runs on a zero-trust model. Follow these steps to pair your device securely:
+### Option A — Same Wi-Fi Network (Router)
+Both devices connected to the same router. Best for home/office use.
 
-1. **Launch the Desktop Companion** (Step 2) and note the **6-digit PIN** and **WebSocket port (8765)** printed in the terminal.
+```
+[Phone] ──── WiFi Router ──── [Desktop]
+```
+
+1. Find desktop IP via `ipconfig` (Step 3).
+2. Launch the Synco app on your phone.
+3. Enter the desktop **IP address** and **Port (8765)**.
+4. Enter the **6-digit PIN** from the desktop terminal.
+5. Tap **Sync & Connect**.
+
+### Option B — Phone Hotspot (Portable)
+Phone acts as the Wi-Fi access point. Desktop connects to phone's hotspot.
+
+```
+[Phone] ──── Hotspot ──── [Desktop]
+```
+
+1. Enable **Mobile Hotspot** on your phone (Settings → Connections → Mobile Hotspot).
+2. Connect your desktop to the phone's hotspot WiFi network.
+3. Run `ipconfig` on the desktop — look for the hotspot adapter's IP. It will be in `192.168.x.x` or `10.x.x.x` range.
+4. Enter that **IP** and **Port (8765)** in the Synco app on the **same phone**.
+5. Enter the **6-digit PIN**.
+6. Tap **Sync & Connect**.
+
+> **Note**: Mobile data can remain ON. Synco uses the local hotspot network, not the internet. No mobile data is consumed.
+
+---
+
+## 🤝 6. Securing the Wireless Connection (Both Options)
+
+1. **Launch the Desktop Companion** (Step 2) and note the **6-digit PIN** and **WebSocket port (8765)**.
 2. **Launch the Synco App** on your phone.
-3. **Grant Permissions**:
-   - **Notification Listening Access**: Allows Synco to stream media playback telemetry and notifications.
-   - **Phone/Calls Access**: Allows Synco to notify you of incoming calls on your desktop terminal.
+3. **Grant Permissions** when prompted:
+   - **Notification Listening Access**: Allows Synco to stream media playback and notifications.
+   - **Phone/Calls Access**: Allows Synco to mirror incoming calls to your desktop.
    - **Bluetooth Connect** (Android 12+): Required for audio device monitoring.
-4. **Personalize Your Profile**:
-   - Tap the glowing profile circle in the top right corner to enter the **Settings Center**.
-   - Input your name (e.g., `John Doe`). The dashboard header will automatically parse your name and display a clean, high-contrast, perfectly circular avatar with your initials (`JD`).
+4. **Personalize Your Profile** (optional):
+   - Tap the glowing profile circle in the top right to enter Settings.
+   - Input your name (e.g., `John Doe`). The dashboard header will display your initials (`JD`).
 5. **Connect to Host**:
-   - Enter your Desktop's **IPv4 Address** (from Step 3) and **Port** (`8765`).
-   - When prompted, enter the **6-digit PIN** displayed on the desktop terminal.
-   - The system performs a secure **X25519 Diffie-Hellman key exchange** with **Ed25519 digital signatures** to verify both identities and derive a shared AES-256-GCM session key.
-   - Tap **Sync & Connect**. If the PIN is correct, the pairing succeeds and all subsequent packets are encrypted end-to-end with AAD-bound AES-256-GCM.
-6. **Web Dashboard (Optional)**:
-   - Once paired, open `http://localhost:8080?token=<auth-token>` on the desktop machine.
-   - The dashboard shows live media telemetry, notification log, call states, and role switch controls — all served with a strict Content Security Policy and no external CDN dependencies.
+   - Enter your Desktop's **IPv4 Address** and **Port** (`8765`).
+   - Enter the **6-digit PIN** displayed on the desktop terminal.
+   - The system performs a secure **X25519 Diffie-Hellman key exchange** with **Ed25519 digital signatures** to derive a shared AES-256-GCM session key.
+   - Tap **Sync & Connect**. If the PIN is correct, pairing succeeds and all packets are encrypted end-to-end.
+6. **Web Dashboard**:
+   - Open `http://localhost:8080?token=<auth-token>` on the desktop browser.
+   - The dashboard shows live media telemetry, call/notification logs, and role switch controls.
 
 ---
 
+## 🎮 7. Controls & Usage
+
+### Audio Role System
+Synco uses an **ownership model** to determine which device controls media:
+- **Desktop as Audio Owner** (default): Play/Pause/Next/Prev/Volume commands execute **on the desktop** (sends keyboard media keys).
+- **Phone as Audio Owner** (after role switch): Commands execute **on the phone** (controls phone media players like YouTube, Spotify).
+
+Click **Switch Audio Role** on the dashboard or use the toggle in the app to switch ownership.
+
+### Interactive Shell (Desktop Terminal)
+The running desktop terminal accepts commands:
+```
+play / p         - Send PLAY command
+pause / s        - Send PAUSE command
+next / n         - Send NEXT track command
+prev / r         - Send PREVIOUS track command
+volume / v <0-100> - Set volume (e.g. 'v 75')
+role             - Switch audio ownership
+call <state> <id> - Simulate call (e.g. 'call incoming +15550199')
+notif <act> <id> <title> <text> - Simulate notification
+help             - Show all commands
+exit / q         - Shut down server
+```
+
+---
+
+## 🛠️ Development
+
+### Running Tests
+```bash
+# Android unit tests
+gradlew :app:testDebugUnitTest
+
+# Desktop unit tests
+gradlew :desktop:test
+```
+
+### Building Release APK
+```bash
+gradlew :app:assembleRelease
+```
+The release build has **ProGuard** enabled for code obfuscation and minification.
+
+---
+
+## 📁 Project Structure
+
+```
+├── app/                         # Android Client
+│   ├── src/main/java/
+│   │   ├── app/                 # Application class
+│   │   ├── artwork/             # Album art caching & downscaling
+│   │   ├── crypto/              # AES-GCM, X25519, Ed25519, HKDF
+│   │   ├── manager/             # Media, Call, Notification, Bluetooth managers
+│   │   ├── network/             # WebSocketClient, ReliableChannel
+│   │   ├── protocol/            # Packet serialization, validation, encryption
+│   │   ├── service/             # Foreground service, notification listener
+│   │   └── ui/                  # Compose screens (Network, Settings, Diagnostics)
+│   └── src/test/
+│
+├── desktop/                     # Desktop Server
+│   ├── src/main/kotlin/
+│   │   ├── web/                 # Javalin web dashboard
+│   │   └── Main.kt              # Server entry point
+│   └── build.gradle.kts
+│
+└── build.gradle.kts             # Root config
+```
+
+---
+
+## 🔒 Privacy Notice
+Synco is an **offline-first local-network utility**. All WebSocket packets are sent directly between your devices over your local private network. **No remote servers, external APIs, or analytics trackers are used.** Persistent identity keys are encrypted at rest with AES-256-GCM. Your data is entirely yours.

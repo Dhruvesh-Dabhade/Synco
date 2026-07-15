@@ -171,8 +171,8 @@ class DesktopAppServer(private val port: Int) {
         server = object : WebSocketServer(InetSocketAddress(port)) {
             override fun onOpen(conn: WebSocket, handshake: ClientHandshake) {
                 val origin = handshake.getFieldValue("Origin")
-                if (origin != null && !origin.contains("localhost") && !origin.contains("127.0.0.1") && !origin.contains("::1")) {
-                    val allowedPrefixes = listOf("http://localhost", "http://127.0.0.1", "file://", "http://[::1]")
+                if (!origin.isNullOrBlank()) {
+                    val allowedPrefixes = listOf("http://localhost", "http://127.0.0.1", "file://", "http://[::1]", "http://10.", "http://172.", "http://192.168.")
                     if (allowedPrefixes.none { origin.startsWith(it) }) {
                         println("[SERVER] Rejecting connection from untrusted origin: $origin")
                         conn.close(1008, "Untrusted origin")
@@ -186,6 +186,8 @@ class DesktopAppServer(private val port: Int) {
                 }
                 activeWebSocket = conn
                 isPairedAndAuthenticated = false
+                webSocketClient.customSender = { conn.send(it) }
+                webSocketClient.setServerConnected(true)
                 println("\n[SERVER] Android client connected from ${conn.remoteSocketAddress}")
                 println("[SERVER] Handshaking... Waiting for PAIR_REQUEST (PIN: $pinCode)")
             }
@@ -195,7 +197,7 @@ class DesktopAppServer(private val port: Int) {
                     activeWebSocket = null
                     isPairedAndAuthenticated = false
                     reliableChannel.disconnect()
-                    println("\n[SERVER] Android client disconnected")
+                    println("\n[SERVER] Android client disconnected — code=$code reason='$reason' remote=$remote")
                 }
             }
 
@@ -212,7 +214,7 @@ class DesktopAppServer(private val port: Int) {
                 val list = clientMessageCounts.computeIfAbsent(conn) { java.util.ArrayList() }
                 synchronized(list) {
                     list.removeIf { now - it > 60000L }
-                    if (list.size >= 120) {
+                    if (list.size >= 300) {
                         println("[SERVER] Rate limit exceeded")
                         conn.close(1008, "Rate limit exceeded")
                         return
@@ -223,7 +225,7 @@ class DesktopAppServer(private val port: Int) {
                 if (!isPairedAndAuthenticated) {
                     handleHandshakeMessage(conn, message)
                 } else {
-                    webSocketClient.sendMessage(message)
+                    webSocketClient.feedIncomingMessage(message)
                 }
             }
 
